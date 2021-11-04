@@ -12,4 +12,5 @@
 #  or implied. See the License for the specific language governing
 #  permissions and limitations under the License.
 
-requirements = ('tensorflow~=2.1.4', 'tf-slim~=1.1.0')
+from src.constants import ENV_MAIN
+requirements = ('tensorflow~=' + ENV_MAIN.TENSORFLOW_VERSION, 'tf-slim~=1.1.0')
