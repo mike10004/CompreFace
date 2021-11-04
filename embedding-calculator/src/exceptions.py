@@ -12,9 +12,10 @@
 #  or implied. See the License for the specific language governing
 #  permissions and limitations under the License.
 
-from werkzeug.exceptions import BadRequest, Locked, InternalServerError, Unauthorized
-
-from src.constants import ENV
+try:
+    from werkzeug.exceptions import BadRequest, Locked, InternalServerError, Unauthorized
+except ImportError:
+    from werkzeug_stub.exceptions import BadRequest, Locked, InternalServerError, Unauthorized
 
 
 class APIKeyNotSpecifiedError(Unauthorized):
