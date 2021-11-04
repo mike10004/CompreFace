@@ -27,7 +27,8 @@ from src.services.flask_.logging_context import FlaskRequestContextAdder, reques
 
 def init_logging(level):
     stream_handler = logging.StreamHandler()
-    stream_handler.addFilter(FlaskRequestContextAdder())
+    if ENV.HABITAT != 'console':
+        stream_handler.addFilter(FlaskRequestContextAdder())
     stream_handler.addFilter(TextFormatter() if ENV.IS_DEV_ENV else JSONFormatter())
     # noinspection PyArgumentList
     logging.basicConfig(level=level,
