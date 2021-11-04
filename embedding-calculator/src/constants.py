@@ -34,6 +34,9 @@ class ENV(Constants):
     GPU_IDX = int(get_env('GPU_IDX', '-1'))
     INTEL_OPTIMIZATION = get_env_bool('INTEL_OPTIMIZATION')
 
+    HABITAT = get_env('COMPREFACE_HABITAT', 'webapp')  # 'console' for non-webapp mode
+    TENSORFLOW_VERSION = get_env('TENSORFLOW_VERSION', '2.2.3')
+
 
 LOGGING_LEVEL = logging._nameToLevel[ENV.LOGGING_LEVEL_NAME]
 ENV_MAIN = ENV
