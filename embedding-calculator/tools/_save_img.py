@@ -12,6 +12,7 @@
 #  or implied. See the License for the specific language governing
 #  permissions and limitations under the License.
 
+import os
 import colorsys
 import logging
 from itertools import repeat
@@ -30,6 +31,7 @@ from src.services.utils.pyutils import get_current_dir, get_nearest_point_idx
 
 logger = logging.getLogger(__name__)
 TMP_DIR = get_current_dir(__file__) / 'tmp'
+FONTS_DIR = get_current_dir(__file__) / 'fonts'
 
 
 # noinspection PyTypeChecker
@@ -68,7 +70,7 @@ def _draw_cross(draw, xy, half_length, color, width):
 
 def _get_font(size):
     try:
-        font_path = str(TMP_DIR / 'arimo-font' / 'Arimo-Regular.ttf')
+        font_path = str(FONTS_DIR / 'Arimo' / 'static' / 'Arimo-Regular.ttf')
         return ImageFont.truetype(font_path, size)
     except Exception as e:
         logger.debug(f"Using raster font because couldn't get custom font: {str(e)}")
@@ -149,5 +151,5 @@ def save_img(img: Array3D,
     for nose in noses:
         _draw_cross(img_draw, xy=nose, half_length=cross_half_length,
                     color=error_color, width=error_line_width)
-
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
     pil_img.save(filepath, 'PNG')
