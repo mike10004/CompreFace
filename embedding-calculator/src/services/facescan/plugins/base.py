@@ -26,10 +26,9 @@ from cached_property import cached_property
 
 from src.services.dto.json_encodable import JSONEncodable
 from src.services.dto import plugin_result
-
+from src.constants import ENV
 
 logger = logging.getLogger(__name__)
-MODELS_ROOT = os.path.expanduser(os.path.join('~', '.models'))
 
 
 @attr.s(auto_attribs=True)
@@ -43,7 +42,7 @@ class MLModel:
 
     @property
     def path(self):
-        return Path(MODELS_ROOT) / self.plugin.backend / self.plugin.slug / self.name
+        return Path(ENV.MODELS_ROOT) / self.plugin.backend / self.plugin.slug / self.name
 
     def exists(self):
         return os.path.exists(self.path)

@@ -12,6 +12,7 @@
 #  or implied. See the License for the specific language governing
 #  permissions and limitations under the License.
 
+import os
 import logging
 
 from src.services.utils.pyutils import get_env, get_env_split, get_env_bool, Constants
@@ -36,6 +37,7 @@ class ENV(Constants):
 
     HABITAT = get_env('COMPREFACE_HABITAT', 'webapp')  # 'console' for non-webapp mode
     TENSORFLOW_VERSION = get_env('TENSORFLOW_VERSION', '2.2.3')
+    MODELS_ROOT = get_env('COMPREFACE_MODELS_ROOT', os.path.expanduser(os.path.join('~', '.cache', 'CompreFace', 'models')))
 
 
 LOGGING_LEVEL = logging._nameToLevel[ENV.LOGGING_LEVEL_NAME]

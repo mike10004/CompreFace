@@ -9,7 +9,8 @@ def _load_image_pathnames(filename_pattern:str=None):
 
 
 def test_detect():
-    mainer = main.Mainer()
+    scanner = main.MainFaceScanner()
+    mainer = main.Mainer(scanner)
     image_pathnames = _load_image_pathnames("00[567]_*.jpg")
     assert image_pathnames
     detections = mainer.scan(image_pathnames)

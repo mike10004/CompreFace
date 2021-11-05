@@ -98,6 +98,26 @@ class Mainer(object):
                 print(dist, path1, d1.index, path2, d2.index, file=self.stdout)
 
 
+class ModelCheck(object):
+
+    def check(self, notifier: Callable[[str], None]):
+        raise NotImplementedError("abstract")
+
+
+class FileExistsModelCheck(ModelCheck):
+
+    def __init__(self, pathname: str):
+        self.pathname = pathname
+
+    def check(self, notifier: Callable[[str], None]):
+        if not os.path.isfile(self.pathname):
+            notifier(f"file not found: {self.pathname}; run src/services/plugins/setup.py to download models, or set environment variable COMPREFACE_MODELS_ROOT to directory where models were already downloaded")
+
+
+class ModelCheckFailedException(Exception):
+    pass
+
+
 class MainFaceScanner(FaceScanner):
     """
     The scanner only performs face detection and embedding calculation.
@@ -112,8 +132,20 @@ class MainFaceScanner(FaceScanner):
     def __init__(self):
         super().__init__()
         import src.services.facescan.plugins.facenet.facenet
-        self.detector: mixins.FaceDetectorMixin = src.services.facescan.plugins.facenet.facenet.FaceDetector() # mixins.FaceDetectorMixin = [pl for pl in plugins if isinstance(pl, mixins.FaceDetectorMixin)][0]
-        self.calculator: mixins.CalculatorMixin = src.services.facescan.plugins.facenet.facenet.Calculator() # [pl for pl in plugins if isinstance(pl, mixins.CalculatorMixin)][0]
+        detector = src.services.facescan.plugins.facenet.facenet.FaceDetector()
+        self.detector: mixins.FaceDetectorMixin = detector
+        calculator = src.services.facescan.plugins.facenet.facenet.Calculator()
+        self.calculator: mixins.CalculatorMixin = calculator
+        self.model_checks = [
+            FileExistsModelCheck(calculator.ml_model_file)
+        ]
+
+    def check_models(self):
+        messages = []
+        for model_check in self.model_checks:
+            model_check.check(messages.append)
+        if messages:
+            raise ModelCheckFailedException("; ".join(messages))
 
     def scan(self, img: Array3D, det_prob_threshold: float = None) -> List[FaceDTO]:
         # noinspection PyTypeChecker
@@ -174,7 +206,7 @@ def _parse_image_spec(image_files: List[str]) -> List[str]:
     return image_files
 
 
-def main(argv1: Sequence[str]=None):
+def main(argv1: Sequence[str]=None, stdout=sys.stdout, stderr=sys.stderr):
     parser = ArgumentParser()
     parser.add_argument("images", metavar='FILE', nargs='+', help="image files to scan/compare")
     parser.add_argument("-l", "--log-level", metavar='LEVEL', choices=('debug', 'info', 'warn', 'error'), default='info', help="set log level (debug, info, warn, or error)")
@@ -188,7 +220,13 @@ def main(argv1: Sequence[str]=None):
     if args.disable_cuda:
         _disable_cuda()
     scanner = MainFaceScanner()
+    try:
+        scanner.check_models()
+    except ModelCheckFailedException as e:
+        print("main:", e, file=stderr)
+        return 1
     mainer = Mainer(scanner)
+    mainer.stdout = stdout
     image_files = _parse_image_spec(args.images)
     detections = mainer.scan(image_files)
     mainer.compare(detections)
