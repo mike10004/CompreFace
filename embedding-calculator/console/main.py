@@ -8,10 +8,14 @@ import logging
 from numpy import ndarray
 import numpy as np
 
+from src.services.dto.bounding_box import BoundingBoxDTO
+from src.services.facescan.plugins import mixins
+from src.services.facescan.scanner.facescanner import FaceScanner
 from src.services.imgtools.read_img import read_img
-from typing import TextIO, List, NamedTuple, Tuple
-from src.services.facescan.scanner.facescanners import scanner
+from typing import TextIO, List, NamedTuple, Tuple, Sequence, Callable
 from src.services.dto.plugin_result import FaceDTO
+from src.services.imgtools.types import Array3D
+
 
 _log = logging.getLogger(__name__)
 
@@ -50,7 +54,8 @@ class SimilarityCalculator(object):
 
 class Mainer(object):
 
-    def __init__(self, stdout: TextIO = sys.stdout, detection_threshold: float = 0.5):
+    def __init__(self, scanner: FaceScanner, stdout: TextIO = sys.stdout, detection_threshold: float = 0.5):
+        self.scanner = scanner
         self.stdout = stdout
         self.detection_threshold = detection_threshold
         self.similarity_calculator = SimilarityCalculator()
@@ -60,7 +65,7 @@ class Mainer(object):
         detections = []
         for image_file in image_files:
             try:
-                faces = scanner.scan(
+                faces = self.scanner.scan(
                     img=read_img(image_file),
                     det_prob_threshold=self.detection_threshold
                 )
@@ -93,14 +98,99 @@ class Mainer(object):
                 print(dist, path1, d1.index, path2, d2.index, file=self.stdout)
 
 
-def main():
+class MainFaceScanner(FaceScanner):
+    """
+    The scanner only performs face detection and embedding calculation.
+    """
+
+    @property
+    def difference_threshold(self) -> float:
+        raise NotImplementedError("not supported by this implementation")
+
+    ID = "MainFaceScanner"
+
+    def __init__(self):
+        super().__init__()
+        import src.services.facescan.plugins.facenet.facenet
+        self.detector: mixins.FaceDetectorMixin = src.services.facescan.plugins.facenet.facenet.FaceDetector() # mixins.FaceDetectorMixin = [pl for pl in plugins if isinstance(pl, mixins.FaceDetectorMixin)][0]
+        self.calculator: mixins.CalculatorMixin = src.services.facescan.plugins.facenet.facenet.Calculator() # [pl for pl in plugins if isinstance(pl, mixins.CalculatorMixin)][0]
+
+    def scan(self, img: Array3D, det_prob_threshold: float = None) -> List[FaceDTO]:
+        # noinspection PyTypeChecker
+        faces = self.detector(img, det_prob_threshold, [self.calculator])
+        return faces
+
+    def find_faces(self, img: Array3D, det_prob_threshold: float = None) -> List[BoundingBoxDTO]:
+        return self.detector.find_faces(img, det_prob_threshold)
+
+
+def _disable_cuda():
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+
+def _os_setenv(var_name: str, var_value: str):
+    os.environ[var_name] = var_value
+
+
+def _set_if_unset(var_name: str,
+                  var_value: str,
+                  getter: Callable[[str], str]=os.getenv,
+                  setter: Callable[[str, str], None]=_os_setenv):
+    current_value = None
+    try:
+        current_value = getter(var_name)
+    except KeyError:
+        pass
+    if current_value is None:
+        setter(var_name, var_value)
+
+
+def _is_integer(token: str) -> bool:
+    try:
+        int(token)
+        return True
+    except ValueError:
+        return False
+
+
+def _parse_image_spec(image_files: List[str]) -> List[str]:
+    if not image_files:
+        raise ValueError("image files must be specified")
+    if image_files[0] == 'samples':
+        limit = None
+        pattern = "*.*"
+        for token in image_files[1:]:
+            if _is_integer(token):
+                limit = int(token)
+            else:
+                pattern = token
+        import glob
+        from sample_images import IMG_DIR
+        images = sorted(glob.glob(str(IMG_DIR / pattern)))
+        if limit is not None:
+            return images[:limit]
+        else:
+            return images
+    return image_files
+
+
+def main(argv1: Sequence[str]=None):
     parser = ArgumentParser()
-    parser.add_argument("images", metavar='FILE [FILES...]', nargs='+', help="image files to scan/compare")
-    parser.add_argument("-l", "--log-level", choices=('debug', 'info', 'warn', 'error'), default='info', help="set log level")
-    args = parser.parse_args()
+    parser.add_argument("images", metavar='FILE', nargs='+', help="image files to scan/compare")
+    parser.add_argument("-l", "--log-level", metavar='LEVEL', choices=('debug', 'info', 'warn', 'error'), default='info', help="set log level (debug, info, warn, or error)")
+    parser.add_argument("--tf-logging", choices=('quiet', 'verbose'), help="tensorflow logging mode ('quiet' or 'verbose')")
+    parser.add_argument("--disable-cuda", action='store_true', help="set environment variable that indcates zero GPUs")
+    args = parser.parse_args(argv1)
     logging.basicConfig(level=logging.__dict__[args.log_level.upper()])
-    mainer = Mainer()
-    detections = mainer.scan(args.images)
+    if args.tf_logging == 'quiet':
+        _set_if_unset('TF_CPP_MIN_LOG_LEVEL', '3')
+        logging.getLogger('tensorflow').setLevel(logging.ERROR)
+    if args.disable_cuda:
+        _disable_cuda()
+    scanner = MainFaceScanner()
+    mainer = Mainer(scanner)
+    image_files = _parse_image_spec(args.images)
+    detections = mainer.scan(image_files)
     mainer.compare(detections)
     return 0
 
