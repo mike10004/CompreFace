@@ -2,7 +2,7 @@
 
 import os.path
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import logging
 
 from numpy import ndarray
@@ -207,7 +207,13 @@ def _parse_image_spec(image_files: List[str]) -> List[str]:
 
 
 def main(argv1: Sequence[str]=None, stdout=sys.stdout, stderr=sys.stderr):
-    parser = ArgumentParser()
+    parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter, epilog="""\
+Environment variables that may be relevant to you:
+
+TF_CPP_MIN_LOG_LEVEL: integer value; higher is quieter; default is 2
+CUDA_VISIBLE_DEVICES: set to empty string to prevent tensorflow from loading CUDA libraries
+COMPREFACE_MODELS_ROOT: root directory where pre-downloaded models are stored
+""")
     parser.add_argument("images", metavar='FILE', nargs='+', help="image files to scan/compare")
     parser.add_argument("-l", "--log-level", metavar='LEVEL', choices=('debug', 'info', 'warn', 'error'), default='info', help="set log level (debug, info, warn, or error)")
     parser.add_argument("--tf-logging", choices=('quiet', 'verbose'), help="tensorflow logging mode ('quiet' or 'verbose')")
