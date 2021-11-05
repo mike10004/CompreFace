@@ -1,0 +1,32 @@
+[
+  [
+    "002_A.jpg.embedding.json",
+    "004_A.jpg.embedding.json",
+    0.9993230536433858
+  ],
+  [
+    "002_A.jpg.embedding.json",
+    "006_A.jpg.embedding.json",
+    0.9987169686682751
+  ],
+  [
+    "002_A.jpg.embedding.json",
+    "009_C.jpg.embedding.json",
+    0.16770698683425328
+  ],
+  [
+    "004_A.jpg.embedding.json",
+    "006_A.jpg.embedding.json",
+    0.9982043186288165
+  ],
+  [
+    "004_A.jpg.embedding.json",
+    "009_C.jpg.embedding.json",
+    0.1629163834960194
+  ],
+  [
+    "006_A.jpg.embedding.json",
+    "009_C.jpg.embedding.json",
+    0.23951647183369118
+  ]
+]
