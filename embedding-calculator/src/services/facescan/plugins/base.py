@@ -45,7 +45,15 @@ class MLModel:
         return Path(ENV.MODELS_ROOT) / self.plugin.backend / self.plugin.slug / self.name
 
     def exists(self):
-        return os.path.exists(self.path)
+        def is_nonempty_dir(directory_pathname) -> bool:
+            if os.path.isfile(directory_pathname):
+                return True
+            dir_files = os.listdir(directory_pathname)
+            for f in dir_files:
+                if os.path.isfile(f):
+                    return True
+            return False
+        return os.path.exists(self.path) and is_nonempty_dir(self.path)
 
     def download_if_not_exists(self):
         """
@@ -55,9 +63,11 @@ class MLModel:
             logger.debug(f'Already exists {self.plugin} model {self.name}')
             return
         logger.debug(f'Getting {self.plugin} model {self.name}')
-        with tempfile.NamedTemporaryFile() as tmpfile:
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmpfile:
             self._download(self.url, tmpfile)
-            self._extract(tmpfile.name)
+            zip_filename = tmpfile.name
+        self._extract(zip_filename)
+        os.remove(zip_filename)
 
     @property
     def url(self):
